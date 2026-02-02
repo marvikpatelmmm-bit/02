@@ -5,31 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JEE Accountability - Login</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <div class="logo">JEE TRACKER 🚀</div>
+    <div class="auth-wrapper">
+        <!-- Background Decorations -->
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+
+        <div class="glass-panel auth-box">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div class="logo" style="font-size: 2rem; margin-bottom: 10px;">JEE TRACKER</div>
+                <p style="color: var(--text-secondary);">Focus. Compete. Succeed.</p>
+            </div>
             
             <!-- Login Form -->
             <form id="loginForm">
-                <input type="text" id="loginUsername" placeholder="Username" required>
-                <input type="password" id="loginPassword" placeholder="Password" required>
-                <button type="submit" class="btn btn-primary" style="width: 100%">Login</button>
+                <div class="form-group">
+                    <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px; display: block;">Username</label>
+                    <input type="text" id="loginUsername" placeholder="e.g. topper_01" required>
+                </div>
+                <div class="form-group">
+                    <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px; display: block;">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 10px;">
+                    Login <i class="fas fa-arrow-right"></i>
+                </button>
             </form>
             
-            <!-- Register Form (Hidden by default) -->
+            <!-- Register Form -->
             <form id="registerForm" style="display: none;">
-                <input type="text" id="regName" placeholder="Full Name" required>
-                <input type="text" id="regUsername" placeholder="Username" required>
-                <input type="password" id="regPassword" placeholder="Password" required>
-                <button type="submit" class="btn btn-success" style="width: 100%">Create Account</button>
+                <div class="form-group">
+                    <input type="text" id="regName" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="regUsername" placeholder="Choose Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="regPassword" placeholder="Choose Password" required>
+                </div>
+                <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; margin-top: 10px;">
+                    Create Account
+                </button>
             </form>
 
-            <div style="text-align: center; margin-top: 20px; font-size: 0.9rem;">
-                <a href="#" id="toggleAuth" style="color: var(--accent-blue);">Create an account</a>
+            <div style="text-align: center; margin-top: 25px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
+                <a href="#" id="toggleAuth" style="color: var(--text-primary); font-size: 0.9rem; text-decoration: none;">
+                    New here? <span style="color: var(--accent-blue);">Create an account</span>
+                </a>
             </div>
-            <div id="authError" style="color: var(--error-red); text-align: center; margin-top: 10px; display: none;"></div>
+            <div id="authError" style="color: var(--danger); text-align: center; margin-top: 15px; font-size: 0.9rem; display: none;"></div>
         </div>
     </div>
     <script src="js/auth.js"></script>

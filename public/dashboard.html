@@ -9,125 +9,147 @@
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <nav class="navbar">
             <div class="logo"><i class="fas fa-rocket"></i> JEE TRACKER</div>
             <div class="nav-links">
-                <span id="userGreeting" style="margin-right: 20px; color: var(--text-secondary);"></span>
+                <span id="userGreeting" style="margin-right: 15px; color: var(--text-muted);">Hi, Student</span>
                 <a href="/dashboard" class="active">Dashboard</a>
                 <a href="/leaderboard">Leaderboard</a>
-                <a href="/profile">My Profile</a>
-                <a href="#" id="logoutBtn">Logout</a>
+                <a href="/profile">Profile</a>
+                <a href="#" id="logoutBtn" style="color: var(--danger);">Logout</a>
             </div>
         </nav>
 
+        <!-- Main Layout -->
         <div class="dashboard-grid">
-            <!-- Left: Task List -->
+            
+            <!-- LEFT: Tasks -->
             <div class="col glass-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3><i class="fas fa-list-check"></i> Today's Plan</h3>
-                    <div class="toggle-switch">
-                        <label style="font-size: 0.8rem; margin-right: 5px; cursor: pointer; color: var(--text-secondary);">
-                            <input type="checkbox" id="globalTaskToggle" onchange="toggleTaskView()"> 
-                            Show All
+                <div style="padding: 20px; border-bottom: 1px solid var(--border-glass);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Today's Plan</h3>
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="globalTaskToggle" onchange="toggleTaskView()"> All
                         </label>
                     </div>
                 </div>
-                <div id="taskList">
-                    <!-- Tasks injected here -->
-                    <div style="text-align: center; color: var(--text-secondary); margin-top: 30px;">
-                        <i class="fas fa-spinner fa-spin"></i> Loading tasks...
-                    </div>
-                </div>
-                <button class="btn btn-primary" id="planBtn" onclick="openPlanModal()" style="width: 100%; margin-top: 20px; justify-content: center;">
-                    <i class="fas fa-plus"></i> Plan Tasks
-                </button>
-            </div>
-
-            <!-- Middle: Active Task / Focus Mode -->
-            <div class="col glass-panel" style="position: relative; overflow: hidden;">
-                <!-- Decorative BG glow -->
-                <div style="position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 200px; height: 200px; background: var(--accent-blue); opacity: 0.1; filter: blur(80px); pointer-events: none;"></div>
-
-                <div id="activeTaskContainer" style="height: 100%;">
-                    <div class="active-task-container" id="noActiveTask">
-                        <i class="fas fa-moon" style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 20px; opacity: 0.5;"></i>
-                        <h2 style="color: var(--text-secondary);">No Active Task</h2>
-                        <p style="color: var(--text-secondary); margin-top: 10px;">Select a task from the left to start focusing.</p>
-                    </div>
-
-                    <div class="active-task-container" id="activeTaskDisplay" style="display: none;">
-                        <h4 id="currentSubject" class="subject-tag" style="font-size: 0.9rem; margin-bottom: 15px;">SUBJECT</h4>
-                        <h2 id="currentTaskName" style="font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,255,255,0.2);">Solving Problems</h2>
-                        
-                        <div class="timer-ring">
-                            <div class="timer-display" id="timer">00:00</div>
-                        </div>
-
-                        <div class="progress-bar" style="background: rgba(255,255,255,0.05); width: 80%;">
-                            <div class="progress-fill" id="timerProgress"></div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
-                            <button class="btn btn-warning" onclick="pauseTask()"><i class="fas fa-pause"></i> Pause</button>
-                            <button class="btn btn-success" onclick="completeTask()"><i class="fas fa-check"></i> Complete</button>
-                        </div>
-                    </div>
-                </div>
                 
-                <div style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
-                    <button class="btn btn-secondary" onclick="openEndDayModal()" style="width: 100%; justify-content: center;">
-                        <i class="fas fa-bed"></i> End Day & Summarize
+                <div class="col-content" id="taskList" style="padding: 20px;">
+                    <!-- Tasks injected here -->
+                    <div style="text-align: center; color: var(--text-muted); margin-top: 20px;">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
+
+                <div style="padding: 20px; border-top: 1px solid var(--border-glass);">
+                    <button class="btn btn-secondary" id="planBtn" onclick="openPlanModal()" style="width: 100%;">
+                        <i class="fas fa-plus"></i> Add Task
                     </button>
                 </div>
             </div>
 
-            <!-- Right: Live Feed -->
-            <div class="col glass-panel feed-column">
-                <h3 style="margin-bottom: 20px;"><i class="fas fa-satellite-dish" style="color: var(--error-red);"></i> Live Room</h3>
-                <div id="liveFeed">
-                    <!-- User cards injected here -->
+            <!-- CENTER: Focus Area -->
+            <div class="col glass-panel">
+                <!-- No Active Task State -->
+                <div id="noActiveTask" class="focus-area">
+                    <div style="width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                        <i class="fas fa-moon" style="font-size: 3rem; color: var(--text-muted);"></i>
+                    </div>
+                    <h2 style="color: var(--text-secondary);">Ready to focus?</h2>
+                    <p style="color: var(--text-muted); margin-top: 10px;">Select a task from the list to begin.</p>
                 </div>
-                <div id="leaderboardMini" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-glass);">
-                    <h4 style="margin-bottom: 15px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Top Performers</h4>
-                    <div id="leaderboardList"></div>
-                    <a href="/leaderboard" style="display: block; text-align: center; margin-top: 15px; font-size: 0.8rem; color: var(--accent-blue); text-decoration: none;">View Full Leaderboard &rarr;</a>
+
+                <!-- Active Task State -->
+                <div id="activeTaskDisplay" class="focus-area" style="display: none;">
+                    <div id="currentSubject" class="subject-badge" style="font-size: 1rem; padding: 5px 12px; margin-bottom: 10px;">MATHS</div>
+                    <h2 id="currentTaskName" style="text-align: center; margin-bottom: 10px; font-size: 1.5rem;">Solving Calculus</h2>
+                    
+                    <div class="timer-circle">
+                        <div id="timer" class="timer-text">25:00</div>
+                    </div>
+
+                    <div class="progress-track">
+                        <div id="timerProgress" class="progress-bar" style="width: 0%"></div>
+                    </div>
+
+                    <div style="display: flex; gap: 15px;">
+                        <button class="btn btn-warning" onclick="pauseTask()">
+                            <i class="fas fa-pause"></i> Pause
+                        </button>
+                        <button class="btn btn-success" onclick="completeTask()">
+                            <i class="fas fa-check"></i> Complete
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Footer Action -->
+                <div style="padding: 15px; text-align: center;">
+                    <button class="btn btn-secondary" onclick="openEndDayModal()" style="font-size: 0.85rem; width: 100%;">
+                        End Day & Summarize
+                    </button>
                 </div>
             </div>
+
+            <!-- RIGHT: Feed -->
+            <div class="col glass-panel">
+                <div style="padding: 20px; border-bottom: 1px solid var(--border-glass);">
+                    <h3>Live Room <span style="font-size: 0.8rem; color: var(--success);">● Online</span></h3>
+                </div>
+                
+                <div class="col-content" id="liveFeed">
+                    <!-- Feed Items -->
+                </div>
+
+                <div style="padding: 15px; border-top: 1px solid var(--border-glass);">
+                    <div style="margin-bottom: 10px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Top Students</div>
+                    <div id="leaderboardList"></div>
+                    <a href="/leaderboard" style="display: block; text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--accent-blue); text-decoration: none;">View All</a>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- Modals -->
-    <div id="planModal" class="modal">
-        <div class="modal-content glass-panel" style="max-width: 700px; border: 1px solid var(--border-glass);">
-            <div class="modal-header">
-                <h2>Plan Your Day</h2>
-                <button class="close-btn" onclick="closeModal('planModal')"><i class="fas fa-times"></i></button>
+    <!-- Plan Modal -->
+    <div id="planModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center;">
+        <div class="glass-panel" style="width: 90%; max-width: 600px; padding: 30px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h2>Plan Tasks</h2>
+                <button onclick="closeModal('planModal')" style="background: none; border: none; color: white; cursor: pointer;"><i class="fas fa-times fa-lg"></i></button>
             </div>
-            <div id="planRows"></div>
-            <button class="btn btn-secondary" onclick="addPlanRow()" style="margin: 10px 0;">+ Add Task</button>
-            <div style="text-align: right; margin-top: 20px;">
+            <div id="planRows" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;"></div>
+            <button class="btn btn-secondary" onclick="addPlanRow()">+ Add Row</button>
+            <div style="margin-top: 20px; text-align: right;">
                 <button class="btn btn-primary" onclick="savePlan()">Save Plan</button>
             </div>
         </div>
     </div>
 
-    <div id="endDayModal" class="modal">
-        <div class="modal-content glass-panel">
-            <div class="modal-header">
-                <h2>End Day Summary</h2>
-                <button class="close-btn" onclick="closeModal('endDayModal')"><i class="fas fa-times"></i></button>
+    <!-- End Day Modal -->
+    <div id="endDayModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center;">
+        <div class="glass-panel" style="width: 90%; max-width: 500px; padding: 30px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h2>Daily Summary</h2>
+                <button onclick="closeModal('endDayModal')" style="background: none; border: none; color: white; cursor: pointer;"><i class="fas fa-times fa-lg"></i></button>
             </div>
-            <label>Maths Problems</label><input type="number" id="sumMath">
-            <label>Physics Problems</label><input type="number" id="sumPhy">
-            <label>Chemistry Problems</label><input type="number" id="sumChem">
-            <label>Topics Covered</label><textarea id="sumTopics" rows="2"></textarea>
-            <label>Total Study Hours</label><input type="number" id="sumHours" step="0.5">
-            <label>Notes</label><textarea id="sumNotes" rows="2"></textarea>
-            <label>Self Rating (1-10)</label><input type="number" id="sumRating" min="1" max="10">
-            <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" onclick="submitSummary()">Submit & Sleep</button>
+            
+            <div class="form-group"><label>Maths Problems</label><input type="number" id="sumMath"></div>
+            <div class="form-group"><label>Physics Problems</label><input type="number" id="sumPhy"></div>
+            <div class="form-group"><label>Chemistry Problems</label><input type="number" id="sumChem"></div>
+            <div class="form-group"><label>Topics Covered</label><textarea id="sumTopics" rows="2"></textarea></div>
+            <div class="form-group"><label>Total Hours</label><input type="number" id="sumHours" step="0.5"></div>
+            <div class="form-group"><label>Notes</label><textarea id="sumNotes" rows="2"></textarea></div>
+            <div class="form-group"><label>Rating (1-10)</label><input type="number" id="sumRating" min="1" max="10"></div>
+            
+            <button class="btn btn-primary" style="width: 100%" onclick="submitSummary()">Submit Summary</button>
         </div>
     </div>
 
     <script src="js/dashboard.js"></script>
+    <script>
+        // Inline script to ensure modal display works even if JS is slow
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    </script>
 </body>
 </html>
