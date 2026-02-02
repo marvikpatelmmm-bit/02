@@ -1,0 +1,5 @@
+{
+  "name": "JEE Study Accountability",
+  "description": "Full-stack Node.js/SQLite app for study tracking, real-time peer monitoring, and competitive leaderboards.",
+  "requestFramePermissions": []
+}

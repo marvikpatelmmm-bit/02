@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEE Accountability - Login</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="logo">JEE TRACKER 🚀</div>
+            
+            <!-- Login Form -->
+            <form id="loginForm">
+                <input type="text" id="loginUsername" placeholder="Username" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%">Login</button>
+            </form>
+            
+            <!-- Register Form (Hidden by default) -->
+            <form id="registerForm" style="display: none;">
+                <input type="text" id="regName" placeholder="Full Name" required>
+                <input type="text" id="regUsername" placeholder="Username" required>
+                <input type="password" id="regPassword" placeholder="Password" required>
+                <button type="submit" class="btn btn-success" style="width: 100%">Create Account</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 20px; font-size: 0.9rem;">
+                <a href="#" id="toggleAuth" style="color: var(--accent-blue);">Create an account</a>
+            </div>
+            <div id="authError" style="color: var(--error-red); text-align: center; margin-top: 10px; display: none;"></div>
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+</body>
+</html>
