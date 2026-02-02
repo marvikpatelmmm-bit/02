@@ -311,22 +311,46 @@ app.post('/api/summary', requireAuth, (req, res) => {
 
 // Stats & Leaderboard
 app.get('/api/leaderboard', requireAuth, (req, res) => {
+    // Aggregating over ALL TIME
     const query = `
         SELECT 
-            u.name, 
+            u.id, u.name, 
             u.current_streak,
-            COUNT(t.id) as total_tasks,
-            SUM(CASE WHEN t.status = 'completed_ontime' THEN 1 ELSE 0 END) as ontime_tasks,
-            ROUND(AVG(ds.total_study_hours), 1) as avg_hours
+            COUNT(DISTINCT t.id) as total_tasks,
+            COALESCE(SUM(ds.total_study_hours), 0) as total_hours,
+            COALESCE(SUM(ds.maths_problems + ds.physics_problems + ds.chemistry_problems), 0) as total_problems
         FROM users u
-        LEFT JOIN tasks t ON u.id = t.user_id AND t.status IN ('completed_ontime', 'completed_delayed')
+        LEFT JOIN tasks t ON u.id = t.user_id AND t.status LIKE 'completed%'
         LEFT JOIN daily_summaries ds ON u.id = ds.user_id
         GROUP BY u.id
-        ORDER BY total_tasks DESC
+        ORDER BY total_hours DESC, total_problems DESC
     `;
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
+    });
+});
+
+app.get('/api/profile', requireAuth, (req, res) => {
+    const userId = req.session.userId;
+    
+    const query = `
+        SELECT 
+            u.name, u.username, u.current_streak, u.created_at,
+            (SELECT COUNT(*) FROM tasks WHERE user_id = u.id AND status LIKE 'completed%') as total_tasks_completed,
+            COALESCE(SUM(ds.total_study_hours), 0) as total_hours,
+            COALESCE(SUM(ds.maths_problems), 0) as total_maths,
+            COALESCE(SUM(ds.physics_problems), 0) as total_physics,
+            COALESCE(SUM(ds.chemistry_problems), 0) as total_chemistry
+        FROM users u
+        LEFT JOIN daily_summaries ds ON u.id = ds.user_id
+        WHERE u.id = ?
+        GROUP BY u.id
+    `;
+    
+    db.get(query, [userId], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(row);
     });
 });
 
@@ -372,6 +396,14 @@ app.get('/', (req, res) => {
 
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/leaderboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'leaderboard.html'));
+});
+
+app.get('/profile', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {

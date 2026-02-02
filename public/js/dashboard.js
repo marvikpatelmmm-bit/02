@@ -37,7 +37,7 @@ function toggleTaskView() {
     if (showGlobalTasks) {
         planBtn.style.display = 'none';
     } else {
-        planBtn.style.display = 'block';
+        planBtn.style.display = 'flex';
     }
     loadTasks();
 }
@@ -53,7 +53,7 @@ async function loadTasks() {
     let hasActiveForMe = false;
 
     if (tasks.length === 0) {
-        list.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">No tasks found.</div>`;
+        list.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px;">No tasks found.</div>`;
         return;
     }
 
@@ -72,25 +72,25 @@ async function loadTasks() {
         let actionBtn = '';
         if (isMyTask) {
             if (task.status === 'pending' || task.status === 'paused') {
-                actionBtn = `<button class="btn btn-primary" style="font-size:0.8rem; padding:5px 10px;" onclick="startTask(${task.id})">${task.status === 'paused' ? 'Resume' : 'Start'}</button>`;
+                actionBtn = `<button class="btn btn-primary" style="font-size:0.8rem; padding:6px 12px;" onclick="startTask(${task.id})"><i class="fas fa-play"></i> ${task.status === 'paused' ? 'Resume' : 'Start'}</button>`;
             } else if (task.status === 'in_progress') {
-                actionBtn = `<button class="btn btn-warning" style="font-size:0.8rem; padding:5px 10px;" onclick="pauseTask()">Pause</button>`;
+                actionBtn = `<span style="color: var(--accent-blue); font-weight: bold; font-size: 0.8rem;"><i class="fas fa-spinner fa-spin"></i> Focusing</span>`;
             } else if (task.status.includes('completed')) {
                 const totalMins = task.actual_minutes || 0;
-                actionBtn = `<span style="font-size: 0.8rem">Done (${totalMins}m)</span>`;
+                actionBtn = `<span style="font-size: 0.8rem; color: var(--success-green);"><i class="fas fa-check"></i> Done (${totalMins}m)</span>`;
             }
         } else {
             // Viewing other's task
-            actionBtn = `<span style="font-size: 0.75rem; color: var(--text-muted);">${task.user_name}</span>`;
+            actionBtn = `<span style="font-size: 0.75rem; color: var(--text-secondary);"><i class="fas fa-user"></i> ${task.user_name}</span>`;
         }
 
         const subjectLabel = task.subject || 'General';
         
         div.innerHTML = `
             <div class="task-info">
-                <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted);">${subjectLabel}</span>
+                <span class="subject-tag">${subjectLabel}</span>
                 <h4>${task.task_name}</h4>
-                <div class="task-meta">Est: ${task.estimated_minutes} mins ${task.status === 'paused' ? '(Paused)' : ''}</div>
+                <div class="task-meta"><i class="far fa-clock"></i> ${task.estimated_minutes} mins ${task.status === 'paused' ? '(Paused)' : ''}</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
                 ${actionBtn}
@@ -111,7 +111,14 @@ function setupActiveTask(task) {
 
     document.getElementById('noActiveTask').style.display = 'none';
     document.getElementById('activeTaskDisplay').style.display = 'block';
-    document.getElementById('currentSubject').textContent = task.subject;
+    
+    // Update labels and styling
+    const subjectEl = document.getElementById('currentSubject');
+    subjectEl.textContent = task.subject;
+    // Reset classes and add specific subject class
+    subjectEl.className = 'subject-tag'; 
+    document.getElementById('activeTaskDisplay').className = `active-task-container ${task.subject.toLowerCase()}`;
+    
     document.getElementById('currentTaskName').textContent = task.task_name;
 
     if (timerInterval) clearInterval(timerInterval);
@@ -138,24 +145,17 @@ function updateTimer() {
     const totalEstSeconds = activeTaskDuration * 60;
     const pct = Math.min((totalSeconds / totalEstSeconds) * 100, 100);
     document.getElementById('timerProgress').style.width = `${pct}%`;
-    
-    if (minutes > activeTaskDuration) {
-        document.getElementById('timer').style.color = 'var(--error-red)';
-    } else {
-        document.getElementById('timer').style.color = 'var(--accent-blue)';
-    }
 }
 
 function clearActiveTaskUI() {
     activeTaskId = null;
     activeTaskStartTime = null;
     if (timerInterval) clearInterval(timerInterval);
-    document.getElementById('noActiveTask').style.display = 'block';
+    document.getElementById('noActiveTask').style.display = 'flex';
     document.getElementById('activeTaskDisplay').style.display = 'none';
 }
 
 async function startTask(id) {
-    // Backend handles stopping current task automatically now
     await fetch(`/api/tasks/${id}/start`, { method: 'POST' });
     loadTasks(); 
 }
@@ -190,7 +190,7 @@ function addPlanRow() {
             <option value="Chemistry">Chemistry</option>
         </select>
         <input type="number" placeholder="Mins" class="p-time" value="60">
-        <button class="remove-row" onclick="this.parentElement.remove()">×</button>
+        <button class="remove-row" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
     `;
     document.getElementById('planRows').appendChild(row);
 }
@@ -272,7 +272,6 @@ function renderFeed(users) {
         
         let statusHtml = '';
         if (isActive) {
-            // Calculate progress for feed
             const startedAt = new Date(user.started_at);
             const now = new Date();
             const sessionMins = Math.max(0, (now - startedAt) / 60000);
@@ -281,28 +280,30 @@ function renderFeed(users) {
             const pct = Math.min((totalMins / estMins) * 100, 100);
             
             statusHtml = `
-                <div>
-                    <div style="font-weight: bold; color: var(--accent-blue)">${user.task_name}</div>
-                    <div style="font-size: 0.8rem; margin-bottom: 4px;">${user.subject}</div>
+                <div style="width: 100%">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight: bold; color: var(--accent-blue);">${user.task_name}</span>
+                        <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">${user.subject}</span>
+                    </div>
                     
                     <div class="feed-progress-bg">
                         <div class="feed-progress-fill" style="width: ${pct}%"></div>
                     </div>
-                    <div style="font-size: 0.75rem; text-align: right; color: var(--text-secondary);">
+                    <div style="font-size: 0.75rem; text-align: right; color: var(--text-secondary); margin-top: 2px;">
                         ${Math.round(totalMins)}/${estMins} min
                     </div>
                 </div>
             `;
         } else {
-            statusHtml = `<div style="color: var(--text-muted); font-style: italic;">Taking a break</div>`;
+            statusHtml = `<div style="color: var(--text-secondary); font-style: italic; font-size: 0.9rem;"> Taking a break</div>`;
         }
 
         div.innerHTML = `
-            <div class="status-dot" style="background: ${isActive ? 'var(--success-green)' : '#555'}"></div>
+            <div class="status-dot" style="background: ${isActive ? 'var(--success-green)' : '#555'}; margin-top: 5px;"></div>
             <div style="flex-grow: 1;">
                 <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
                     <strong>${user.name}</strong>
-                    <span style="font-size: 0.7rem; background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 4px;">✅ ${user.completed_today}</span>
+                    <span style="font-size: 0.7rem; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">✅ ${user.completed_today}</span>
                 </div>
                 ${statusHtml}
             </div>
@@ -311,30 +312,27 @@ function renderFeed(users) {
     });
 }
 
-// --- LEADERBOARD ---
+// --- LEADERBOARD MINI ---
 async function loadLeaderboard() {
     const res = await fetch('/api/leaderboard');
     const data = await res.json();
     const list = document.getElementById('leaderboardList');
     list.innerHTML = '';
     
-    data.slice(0, 5).forEach((u, i) => {
+    // Show Top 3 in mini view
+    data.slice(0, 3).forEach((u, i) => {
         const div = document.createElement('div');
-        div.style.padding = '8px 0';
-        div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+        div.style.padding = '10px 0';
+        div.style.borderBottom = '1px solid var(--border-glass)';
         div.innerHTML = `
             <div style="display:flex; justify-content:space-between; font-size: 0.9rem;">
-                <span>#${i+1} <strong>${u.name}</strong></span>
-                <span>🔥 ${u.current_streak}</span>
-            </div>
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                ${u.total_tasks} Tasks (${u.ontime_tasks} On-time)
+                <div style="display:flex; gap: 8px;">
+                    <span style="font-weight: bold; width: 20px;">#${i+1}</span>
+                    <span>${u.name}</span>
+                </div>
+                <span style="color: var(--accent-pink); font-weight: bold;">🔥 ${u.current_streak}</span>
             </div>
         `;
         list.appendChild(div);
     });
-}
-
-function showLeaderboard() {
-    alert("Full Leaderboard Page coming in V2! Check the sidebar for top stats.");
 }

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard | JEE Tracker</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo"><i class="fas fa-rocket"></i> JEE TRACKER</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/leaderboard" class="active">Leaderboard</a>
+                <a href="/profile">My Profile</a>
+                <a href="#" id="logoutBtn">Logout</a>
+            </div>
+        </nav>
+
+        <div class="glass-panel" style="padding: 40px; min-height: 80vh;">
+            <div style="text-align: center; margin-bottom: 40px;">
+                <h1 class="text-gradient" style="font-size: 2.5rem; margin-bottom: 10px;">Hall of Fame</h1>
+                <p style="color: var(--text-secondary);">Compete with peers on Hours Studied, Problems Solved, and Consistency.</p>
+            </div>
+
+            <!-- Podium -->
+            <div class="podium-container" id="podium">
+                <!-- Injected via JS -->
+            </div>
+
+            <!-- Controls -->
+            <div style="display: flex; gap: 15px; margin-bottom: 20px; justify-content: flex-end;">
+                <span style="align-self: center; color: var(--text-secondary); font-size: 0.9rem;">Sort by:</span>
+                <button class="btn btn-secondary" onclick="sortLeaderboard('hours')">Hours</button>
+                <button class="btn btn-secondary" onclick="sortLeaderboard('problems')">Problems</button>
+                <button class="btn btn-secondary" onclick="sortLeaderboard('streak')">Streak</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">Rank</th>
+                            <th width="30%">Student</th>
+                            <th>Streak</th>
+                            <th onclick="sortLeaderboard('hours')">Total Hours <i class="fas fa-sort"></i></th>
+                            <th onclick="sortLeaderboard('problems')">Problems Solved <i class="fas fa-sort"></i></th>
+                            <th>Tasks Done</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lbBody">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lbData = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Logout logic
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+            });
+
+            await fetchLeaderboard();
+        });
+
+        async function fetchLeaderboard() {
+            try {
+                const res = await fetch('/api/leaderboard');
+                if (res.status === 401) window.location.href = '/';
+                lbData = await res.json();
+                renderLeaderboard(lbData);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function sortLeaderboard(criteria) {
+            let sorted = [...lbData];
+            if (criteria === 'hours') {
+                sorted.sort((a, b) => b.total_hours - a.total_hours);
+            } else if (criteria === 'problems') {
+                sorted.sort((a, b) => b.total_problems - a.total_problems);
+            } else if (criteria === 'streak') {
+                sorted.sort((a, b) => b.current_streak - a.current_streak);
+            }
+            renderLeaderboard(sorted);
+        }
+
+        function renderLeaderboard(data) {
+            const tbody = document.getElementById('lbBody');
+            const podium = document.getElementById('podium');
+            tbody.innerHTML = '';
+            podium.innerHTML = '';
+
+            // Render Podium (Top 3)
+            if (data.length > 0) renderPodiumPlace(data[1], 2, podium); // 2nd
+            if (data.length > 0) renderPodiumPlace(data[0], 1, podium); // 1st
+            if (data.length > 2) renderPodiumPlace(data[2], 3, podium); // 3rd
+
+            // Render Table
+            data.forEach((u, index) => {
+                const tr = document.createElement('tr');
+                let rankIcon = `#${index + 1}`;
+                if (index === 0) rankIcon = '🥇';
+                if (index === 1) rankIcon = '🥈';
+                if (index === 2) rankIcon = '🥉';
+
+                tr.innerHTML = `
+                    <td style="font-weight: bold; font-size: 1.1rem;">${rankIcon}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="avatar-placeholder">${u.name.charAt(0)}</div>
+                            ${u.name}
+                        </div>
+                    </td>
+                    <td><span style="color: var(--accent-pink); font-weight: bold;">🔥 ${u.current_streak}</span></td>
+                    <td style="color: var(--accent-blue); font-weight: bold;">${u.total_hours} hrs</td>
+                    <td style="color: var(--accent-purple); font-weight: bold;">${u.total_problems}</td>
+                    <td>${u.total_tasks}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderPodiumPlace(user, place, container) {
+            if (!user) return;
+            const div = document.createElement('div');
+            div.className = `podium-place p-${place}`;
+            div.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <div class="avatar-placeholder" style="width: 60px; height: 60px; font-size: 1.5rem; margin: 0 auto; box-shadow: 0 0 20px rgba(255,255,255,0.2); border: 2px solid white;">${user.name.charAt(0)}</div>
+                    <div style="margin-top: 5px; font-weight: bold;">${user.name}</div>
+                </div>
+                <div class="podium-bar">${place}</div>
+            `;
+            container.appendChild(div);
+        }
+    </script>
+</body>
+</html>

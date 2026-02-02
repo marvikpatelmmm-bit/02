@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | JEE Tracker</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo"><i class="fas fa-rocket"></i> JEE TRACKER</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/leaderboard">Leaderboard</a>
+                <a href="/profile" class="active">My Profile</a>
+                <a href="#" id="logoutBtn">Logout</a>
+            </div>
+        </nav>
+
+        <!-- Profile Header -->
+        <div class="glass-panel" style="padding: 40px; margin-bottom: 30px; display: flex; align-items: center; gap: 30px;">
+            <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);">
+                <span id="profileInitial">U</span>
+            </div>
+            <div>
+                <h1 id="profileName" style="margin-bottom: 5px;">Student Name</h1>
+                <p id="profileUsername" style="color: var(--text-secondary); margin-bottom: 10px;">@username</p>
+                <div style="display: flex; gap: 15px;">
+                    <span class="subject-tag" style="background: rgba(236, 72, 153, 0.2); color: #f472b6;">JEE ASPIRANT</span>
+                    <span id="joinDate" style="font-size: 0.8rem; color: var(--text-secondary); align-self: center;">Joined: -</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overall Stats -->
+        <h3 style="margin-bottom: 20px; border-left: 4px solid var(--accent-blue); padding-left: 10px;">Career Statistics</h3>
+        <div class="stats-grid">
+            <div class="glass-panel stat-card">
+                <div class="stat-label">Total Study Hours</div>
+                <div class="stat-value text-gradient" id="statHours">0</div>
+                <i class="fas fa-clock" style="color: var(--text-secondary);"></i>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-label">Problems Solved</div>
+                <div class="stat-value text-gradient" id="statProblems">0</div>
+                <i class="fas fa-brain" style="color: var(--text-secondary);"></i>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-label">Tasks Completed</div>
+                <div class="stat-value text-gradient" id="statTasks">0</div>
+                <i class="fas fa-check-circle" style="color: var(--text-secondary);"></i>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-label">Current Streak</div>
+                <div class="stat-value" style="color: var(--accent-pink);" id="statStreak">0</div>
+                <i class="fas fa-fire" style="color: var(--accent-pink);"></i>
+            </div>
+        </div>
+
+        <!-- Subject Breakdown -->
+        <h3 style="margin-bottom: 20px; border-left: 4px solid var(--accent-purple); padding-left: 10px;">Subject Breakdown</h3>
+        <div class="stats-grid">
+            <div class="glass-panel stat-card" style="border-bottom: 4px solid #3b82f6;">
+                <div class="stat-label">Maths Problems</div>
+                <div class="stat-value" style="color: #60a5fa;" id="statMaths">0</div>
+            </div>
+            <div class="glass-panel stat-card" style="border-bottom: 4px solid #8b5cf6;">
+                <div class="stat-label">Physics Problems</div>
+                <div class="stat-value" style="color: #a78bfa;" id="statPhysics">0</div>
+            </div>
+            <div class="glass-panel stat-card" style="border-bottom: 4px solid #10b981;">
+                <div class="stat-label">Chemistry Problems</div>
+                <div class="stat-value" style="color: #34d399;" id="statChem">0</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+            });
+
+            await loadProfile();
+        });
+
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/profile');
+                if (res.status === 401) window.location.href = '/';
+                const data = await res.json();
+
+                document.getElementById('profileName').textContent = data.name;
+                document.getElementById('profileInitial').textContent = data.name.charAt(0);
+                document.getElementById('profileUsername').textContent = '@' + data.username;
+                
+                const date = new Date(data.created_at);
+                document.getElementById('joinDate').textContent = `Joined: ${date.toLocaleDateString()}`;
+
+                document.getElementById('statHours').textContent = data.total_hours;
+                document.getElementById('statTasks').textContent = data.total_tasks_completed;
+                document.getElementById('statStreak').textContent = data.current_streak;
+                
+                const totalProblems = data.total_maths + data.total_physics + data.total_chemistry;
+                document.getElementById('statProblems').textContent = totalProblems;
+
+                document.getElementById('statMaths').textContent = data.total_maths;
+                document.getElementById('statPhysics').textContent = data.total_physics;
+                document.getElementById('statChem').textContent = data.total_chemistry;
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>
