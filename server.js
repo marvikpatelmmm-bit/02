@@ -39,6 +39,7 @@ function initDatabase() {
             subject TEXT,
             estimated_minutes INTEGER NOT NULL,
             actual_minutes INTEGER,
+            accumulated_minutes INTEGER DEFAULT 0,
             status TEXT DEFAULT 'pending',
             started_at DATETIME,
             completed_at DATETIME,
@@ -46,6 +47,11 @@ function initDatabase() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )`);
+
+        // Attempt to add column if it doesn't exist (Migration for existing dbs)
+        db.run("ALTER TABLE tasks ADD COLUMN accumulated_minutes INTEGER DEFAULT 0", (err) => {
+            // Ignore error if column exists
+        });
 
         // Daily Summaries
         db.run(`CREATE TABLE IF NOT EXISTS daily_summaries (
@@ -143,9 +149,19 @@ app.get('/api/me', requireAuth, (req, res) => {
 // Tasks
 app.get('/api/tasks/today', requireAuth, (req, res) => {
     const today = new Date().toISOString().split('T')[0];
-    db.all(`SELECT * FROM tasks WHERE user_id = ? AND task_date = ? ORDER BY status DESC, created_at ASC`, 
-        [req.session.userId, today], 
-        (err, rows) => {
+    const showAll = req.query.all === 'true';
+    
+    let query = `SELECT t.*, u.name as user_name FROM tasks t JOIN users u ON t.user_id = u.id WHERE t.task_date = ?`;
+    let params = [today];
+
+    if (!showAll) {
+        query += ` AND t.user_id = ?`;
+        params.push(req.session.userId);
+    }
+    
+    query += ` ORDER BY t.created_at ASC`;
+
+    db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         }
@@ -168,17 +184,44 @@ app.post('/api/tasks/batch', requireAuth, (req, res) => {
     });
 });
 
+// Helper to pause active task
+function pauseActiveTaskInternal(userId, now, callback) {
+    db.get(`SELECT active_task_id FROM active_sessions WHERE user_id = ?`, [userId], (err, session) => {
+        if (err || !session) {
+            return callback(null);
+        }
+        
+        const activeTaskId = session.active_task_id;
+        db.get(`SELECT started_at, accumulated_minutes FROM tasks WHERE id = ?`, [activeTaskId], (err, task) => {
+            if (err || !task) return callback(null);
+            
+            const startTime = new Date(task.started_at);
+            const endTime = new Date(now);
+            const sessionMinutes = Math.max(0, Math.round((endTime - startTime) / 60000)); // prevent negative
+            const totalAccumulated = (task.accumulated_minutes || 0) + sessionMinutes;
+
+            db.run(`UPDATE tasks SET status = 'paused', started_at = NULL, accumulated_minutes = ? WHERE id = ?`, 
+                [totalAccumulated, activeTaskId], 
+                (err) => {
+                    db.run(`DELETE FROM active_sessions WHERE user_id = ?`, [userId], (err) => {
+                         callback(null);
+                    });
+                }
+            );
+        });
+    });
+}
+
 app.post('/api/tasks/:id/start', requireAuth, (req, res) => {
     const taskId = req.params.id;
     const userId = req.session.userId;
     const now = new Date().toISOString();
 
     db.serialize(() => {
-        // Stop any other active session for this user
-        db.run(`DELETE FROM active_sessions WHERE user_id = ?`, [userId]);
-        
-        // Start task
-        db.run(`UPDATE tasks SET status = 'in_progress', started_at = ? WHERE id = ? AND user_id = ?`, 
+        // 1. Pause any ongoing task logic
+        pauseActiveTaskInternal(userId, now, () => {
+             // 2. Start new task
+            db.run(`UPDATE tasks SET status = 'in_progress', started_at = ? WHERE id = ? AND user_id = ?`, 
             [now, taskId, userId], 
             function(err) {
                 if (err) return res.status(500).json({ error: err.message });
@@ -193,6 +236,24 @@ app.post('/api/tasks/:id/start', requireAuth, (req, res) => {
                 );
             }
         );
+        });
+    });
+});
+
+app.post('/api/tasks/:id/pause', requireAuth, (req, res) => {
+    const taskId = req.params.id;
+    const userId = req.session.userId;
+    const now = new Date().toISOString();
+
+    // Verify this is the active task or just use the generic pause logic
+    db.get(`SELECT active_task_id FROM active_sessions WHERE user_id = ?`, [userId], (err, session) => {
+        if (!session || session.active_task_id != taskId) {
+            return res.status(400).json({ error: 'Task is not currently active' });
+        }
+        
+        pauseActiveTaskInternal(userId, now, () => {
+            res.json({ success: true });
+        });
     });
 });
 
@@ -201,23 +262,28 @@ app.post('/api/tasks/:id/complete', requireAuth, (req, res) => {
     const userId = req.session.userId;
     const now = new Date().toISOString();
 
-    db.get(`SELECT started_at, estimated_minutes FROM tasks WHERE id = ?`, [taskId], (err, task) => {
+    db.get(`SELECT started_at, estimated_minutes, accumulated_minutes FROM tasks WHERE id = ?`, [taskId], (err, task) => {
         if (err || !task) return res.status(404).json({ error: 'Task not found' });
 
-        const startTime = new Date(task.started_at);
-        const endTime = new Date();
-        const actualMinutes = Math.round((endTime - startTime) / 60000);
+        let currentSessionMinutes = 0;
+        if (task.started_at) {
+            const startTime = new Date(task.started_at);
+            const endTime = new Date();
+            currentSessionMinutes = Math.max(0, Math.round((endTime - startTime) / 60000));
+        }
+        
+        const totalMinutes = (task.accumulated_minutes || 0) + currentSessionMinutes;
         
         // Determine status (grace period of 5 mins)
-        const status = actualMinutes <= (task.estimated_minutes + 5) ? 'completed_ontime' : 'completed_delayed';
+        const status = totalMinutes <= (task.estimated_minutes + 5) ? 'completed_ontime' : 'completed_delayed';
 
         db.serialize(() => {
             db.run(`DELETE FROM active_sessions WHERE user_id = ?`, [userId]);
             db.run(`UPDATE tasks SET status = ?, completed_at = ?, actual_minutes = ? WHERE id = ?`, 
-                [status, now, actualMinutes, taskId],
+                [status, now, totalMinutes, taskId],
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    res.json({ success: true, status, actualMinutes });
+                    res.json({ success: true, status, actualMinutes: totalMinutes });
                 }
             );
         });
@@ -274,7 +340,7 @@ app.get('/api/stream', requireAuth, (req, res) => {
         const query = `
             SELECT 
                 u.id, u.name, 
-                t.task_name, t.subject, t.started_at, t.estimated_minutes,
+                t.task_name, t.subject, t.started_at, t.estimated_minutes, t.accumulated_minutes,
                 (SELECT COUNT(*) FROM tasks WHERE user_id = u.id AND status LIKE 'completed%' AND task_date = DATE('now')) as completed_today
             FROM users u
             LEFT JOIN active_sessions as_sess ON u.id = as_sess.user_id

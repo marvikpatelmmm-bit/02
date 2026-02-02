@@ -1,9 +1,11 @@
 // --- STATE ---
 let activeTaskId = null;
 let activeTaskStartTime = null;
+let activeTaskAccumulated = 0;
 let activeTaskDuration = 0; // minutes
 let timerInterval = null;
 let currentUser = null;
+let showGlobalTasks = false;
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -29,52 +31,75 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     window.location.href = '/';
 });
 
+function toggleTaskView() {
+    showGlobalTasks = document.getElementById('globalTaskToggle').checked;
+    const planBtn = document.getElementById('planBtn');
+    if (showGlobalTasks) {
+        planBtn.style.display = 'none';
+    } else {
+        planBtn.style.display = 'block';
+    }
+    loadTasks();
+}
+
 // --- TASKS ---
 async function loadTasks() {
-    const res = await fetch('/api/tasks/today');
+    const endpoint = showGlobalTasks ? '/api/tasks/today?all=true' : '/api/tasks/today';
+    const res = await fetch(endpoint);
     const tasks = await res.json();
     const list = document.getElementById('taskList');
     list.innerHTML = '';
 
-    let hasActive = false;
+    let hasActiveForMe = false;
 
     if (tasks.length === 0) {
-        list.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">No tasks planned for today.</div>`;
+        list.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">No tasks found.</div>`;
         return;
     }
 
     tasks.forEach(task => {
-        if (task.status === 'in_progress') {
+        const isMyTask = task.user_id === currentUser.id;
+        
+        if (isMyTask && task.status === 'in_progress') {
             setupActiveTask(task);
-            hasActive = true;
+            hasActiveForMe = true;
         }
 
         const div = document.createElement('div');
-        div.className = `task-card ${task.subject.toLowerCase()} ${task.status}`;
+        div.className = `task-card ${task.subject ? task.subject.toLowerCase() : ''} ${task.status}`;
         
+        // Logic for Action Button
         let actionBtn = '';
-        if (task.status === 'pending' && !activeTaskId) {
-            actionBtn = `<button class="btn btn-primary" onclick="startTask(${task.id}, '${task.task_name}')">Start</button>`;
-        } else if (task.status === 'in_progress') {
-            actionBtn = `<span style="color: var(--accent-blue); font-weight: bold;">In Progress...</span>`;
-        } else if (task.status.includes('completed')) {
-            const timeDiff = task.actual_minutes - task.estimated_minutes;
-            const diffStr = timeDiff > 0 ? `+${timeDiff}m` : `${timeDiff}m`;
-            actionBtn = `<span style="font-size: 0.8rem">${task.actual_minutes}m (${diffStr})</span>`;
+        if (isMyTask) {
+            if (task.status === 'pending' || task.status === 'paused') {
+                actionBtn = `<button class="btn btn-primary" style="font-size:0.8rem; padding:5px 10px;" onclick="startTask(${task.id})">${task.status === 'paused' ? 'Resume' : 'Start'}</button>`;
+            } else if (task.status === 'in_progress') {
+                actionBtn = `<button class="btn btn-warning" style="font-size:0.8rem; padding:5px 10px;" onclick="pauseTask()">Pause</button>`;
+            } else if (task.status.includes('completed')) {
+                const totalMins = task.actual_minutes || 0;
+                actionBtn = `<span style="font-size: 0.8rem">Done (${totalMins}m)</span>`;
+            }
+        } else {
+            // Viewing other's task
+            actionBtn = `<span style="font-size: 0.75rem; color: var(--text-muted);">${task.user_name}</span>`;
         }
 
+        const subjectLabel = task.subject || 'General';
+        
         div.innerHTML = `
             <div class="task-info">
-                <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted);">${task.subject}</span>
+                <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted);">${subjectLabel}</span>
                 <h4>${task.task_name}</h4>
-                <div class="task-meta">Est: ${task.estimated_minutes} mins</div>
+                <div class="task-meta">Est: ${task.estimated_minutes} mins ${task.status === 'paused' ? '(Paused)' : ''}</div>
             </div>
-            <div>${actionBtn}</div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                ${actionBtn}
+            </div>
         `;
         list.appendChild(div);
     });
 
-    if (!hasActive) clearActiveTaskUI();
+    if (!hasActiveForMe) clearActiveTaskUI();
 }
 
 // --- TIMER LOGIC ---
@@ -82,6 +107,7 @@ function setupActiveTask(task) {
     activeTaskId = task.id;
     activeTaskStartTime = new Date(task.started_at);
     activeTaskDuration = task.estimated_minutes;
+    activeTaskAccumulated = task.accumulated_minutes || 0;
 
     document.getElementById('noActiveTask').style.display = 'none';
     document.getElementById('activeTaskDisplay').style.display = 'block';
@@ -97,7 +123,11 @@ function updateTimer() {
     if (!activeTaskStartTime) return;
     const now = new Date();
     const diffMs = now - activeTaskStartTime;
-    const totalSeconds = Math.floor(diffMs / 1000);
+    const sessionSeconds = Math.floor(diffMs / 1000);
+    
+    // Total elapsed = Accumulated + Current Session
+    const totalSeconds = (activeTaskAccumulated * 60) + sessionSeconds;
+    
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
 
@@ -118,14 +148,22 @@ function updateTimer() {
 
 function clearActiveTaskUI() {
     activeTaskId = null;
+    activeTaskStartTime = null;
     if (timerInterval) clearInterval(timerInterval);
     document.getElementById('noActiveTask').style.display = 'block';
     document.getElementById('activeTaskDisplay').style.display = 'none';
 }
 
 async function startTask(id) {
+    // Backend handles stopping current task automatically now
     await fetch(`/api/tasks/${id}/start`, { method: 'POST' });
-    loadTasks(); // Reloads list and sets up active task
+    loadTasks(); 
+}
+
+async function pauseTask() {
+    if (!activeTaskId) return;
+    await fetch(`/api/tasks/${activeTaskId}/pause`, { method: 'POST' });
+    loadTasks();
 }
 
 async function completeTask() {
@@ -232,19 +270,39 @@ function renderFeed(users) {
         
         div.className = `user-card ${isActive ? 'active-user' : ''}`;
         
-        let statusHtml = isActive 
-            ? `<div>
-                 <div style="font-weight: bold; color: var(--accent-blue)">${user.task_name}</div>
-                 <div style="font-size: 0.8rem">${user.subject} • Est: ${user.estimated_minutes}m</div>
-               </div>`
-            : `<div style="color: var(--text-muted); font-style: italic;">Taking a break</div>`;
+        let statusHtml = '';
+        if (isActive) {
+            // Calculate progress for feed
+            const startedAt = new Date(user.started_at);
+            const now = new Date();
+            const sessionMins = Math.max(0, (now - startedAt) / 60000);
+            const totalMins = (user.accumulated_minutes || 0) + sessionMins;
+            const estMins = user.estimated_minutes;
+            const pct = Math.min((totalMins / estMins) * 100, 100);
+            
+            statusHtml = `
+                <div>
+                    <div style="font-weight: bold; color: var(--accent-blue)">${user.task_name}</div>
+                    <div style="font-size: 0.8rem; margin-bottom: 4px;">${user.subject}</div>
+                    
+                    <div class="feed-progress-bg">
+                        <div class="feed-progress-fill" style="width: ${pct}%"></div>
+                    </div>
+                    <div style="font-size: 0.75rem; text-align: right; color: var(--text-secondary);">
+                        ${Math.round(totalMins)}/${estMins} min
+                    </div>
+                </div>
+            `;
+        } else {
+            statusHtml = `<div style="color: var(--text-muted); font-style: italic;">Taking a break</div>`;
+        }
 
         div.innerHTML = `
             <div class="status-dot" style="background: ${isActive ? 'var(--success-green)' : '#555'}"></div>
             <div style="flex-grow: 1;">
-                <div style="display:flex; justify-content:space-between;">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
                     <strong>${user.name}</strong>
-                    <span style="font-size: 0.7rem; background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 4px;">✅ ${user.completed_today} today</span>
+                    <span style="font-size: 0.7rem; background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 4px;">✅ ${user.completed_today}</span>
                 </div>
                 ${statusHtml}
             </div>

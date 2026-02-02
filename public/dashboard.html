@@ -21,12 +21,20 @@
         <div class="dashboard-grid">
             <!-- Left: Task List -->
             <div class="col">
-                <h3 style="margin-bottom: 15px;">Today's Plan</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Today's Plan</h3>
+                    <div class="toggle-switch">
+                        <label style="font-size: 0.8rem; margin-right: 5px; cursor: pointer;">
+                            <input type="checkbox" id="globalTaskToggle" onchange="toggleTaskView()"> 
+                            Show All
+                        </label>
+                    </div>
+                </div>
                 <div id="taskList">
                     <!-- Tasks injected here -->
                     <div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Loading tasks...</div>
                 </div>
-                <button class="btn btn-primary" onclick="openPlanModal()" style="width: 100%; margin-top: 15px;">+ Plan Tasks</button>
+                <button class="btn btn-primary" id="planBtn" onclick="openPlanModal()" style="width: 100%; margin-top: 15px;">+ Plan Tasks</button>
             </div>
 
             <!-- Middle: Active Task / Focus Mode -->
@@ -47,6 +55,7 @@
                             <div class="progress-fill" id="timerProgress"></div>
                         </div>
                         <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button class="btn btn-warning" onclick="pauseTask()">⏸ Pause</button>
                             <button class="btn btn-success" onclick="completeTask()">✅ Complete</button>
                         </div>
                     </div>
